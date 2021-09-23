@@ -1,11 +1,16 @@
 program travesty;
 
+{$mode objfpc}{$H+}
+
 uses
+  Classes,
+  resource,
   crt;
 
 const
   ArraySize = 3000;
   MaxPat = 9;
+  fileName = 'TEMPalice.txt';
 
 var
   BigArray: packed array [1..ArraySize] of char;
@@ -13,10 +18,14 @@ var
   Pattern: packed array [1..MaxPat] of char;
   SkipArray: array [1..ArraySize] of integer;
   OutChars, PatLength, CharCount, TotalChars, Seed: integer;
-  f: TextFile;
+  f, deleteMe: TextFile;
   OutputText: string;
   NearEnd: boolean;
   NewChar: char;
+
+  outputString: string;
+  ss: TStringStream;
+  r: TResourceStream;
 
   function Random(var RandInt: integer): real;
   begin
@@ -25,8 +34,6 @@ var
   end;
 
   procedure InParams;
-  var
-    InFile: string[12];
   begin
     WRITELN('Enter a Seed (1..1000) for the randomizer');
     READLN(Seed);
@@ -37,9 +44,7 @@ var
       READLN(PatLength)
     until (PatLength in [2..MaxPat]);
     PatLength := PatLength - 1;
-    WRITELN('Name of input file?');
-    READLN(InFile);
-    Assign(f, InFile);
+    Assign(f, fileName);
     RESET(f);
   end;
 
@@ -239,15 +244,42 @@ var
     ClearFreq;
   end; {Procedure NewPattern}
 
+{$R *.res}
+
 begin {Main Program}
   CharCount := 0;
   OutChars := 0;
+
+  (* Load resource *)
+  ss := TStringStream.Create;
+  try
+    r := TResourceStream.Create(HINSTANCE, 'ALICE', PChar(RT_RCDATA));
+    try
+      ss.CopyFrom(r, r.Size);
+    finally
+      r.Free;
+    end;
+    outputString := ss.DataString;
+  finally
+    ss.Free;
+  end;
+
+  (* Save as file *)
+  AssignFile(deleteMe, fileName);
+  try
+    ReWrite(deleteMe);
+    Write(deleteMe, outputString);
+  finally
+    CloseFile(deleteMe);
+  end;
+
   Randomize;
   OutputText := '';
   ClearFreq;
   NullArrays;
   InParams;
   FillArray;
+  //TotalChars := 2999;
   FirstPattern;
   InitSkip;
   repeat
